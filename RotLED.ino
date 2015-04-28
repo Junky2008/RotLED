@@ -11,6 +11,12 @@
 #define DATA_PIN (0x01 << 4) // PORTD P4, PIN D14
 #define LED_PIN (0x01 << 25) // PORTB P25, PIN D2
 
+#define PIOD_IRQ (0x01 << 14) // PORTD Interupt
+
+volatile uint32_t *REG_ICER = (volatile uint32_t *)0xE000E180;
+volatile uint32_t *REG_ICPR = (volatile uint32_t *)0xE000E280;
+volatile uint32_t *REG_ISER = (volatile uint32_t *)0xE000E100;
+
 //difference counting up
 volatile int diff_up = 0;
 //difference counting down
@@ -35,45 +41,44 @@ void PIOD_Handler(void) {
 void setup() {
   //Set DATA_PIN and CLOCK_PIN as input
   //disable interrupts
-  PIOD->PIO_IDR = DATA_PIN;
-  PIOD->PIO_IDR = CLOCK_PIN;
+  REG_PIOD_IDR = DATA_PIN;
+  REG_PIOD_IDR = CLOCK_PIN;
   //disable internal pull-up
-  PIOD->PIO_PUDR = DATA_PIN;
-  PIOD->PIO_PUDR = CLOCK_PIN;
+  REG_PIOD_PUDR = DATA_PIN;
+  REG_PIOD_PUDR = CLOCK_PIN;
   //enable filtering
-  PIOD->PIO_IFER = DATA_PIN;
-  PIOD->PIO_IFER = CLOCK_PIN;
+  REG_PIOD_IFER = DATA_PIN;
+  REG_PIOD_IFER = CLOCK_PIN;
   //set slow clock devider for debounce
-  PIOD->PIO_SCDR = 0x04;
+  REG_PIOD_SCDR = 0x04;
   //enable input debouncing
-  PIOD->PIO_DIFSR = DATA_PIN;
-  PIOD->PIO_DIFSR = CLOCK_PIN;
+  REG_PIOD_DIFSR = DATA_PIN;
+  REG_PIOD_DIFSR = CLOCK_PIN;
   //set pins as input
-  PIOD->PIO_ODR = DATA_PIN;
-  PIOD->PIO_ODR = CLOCK_PIN;
+  REG_PIOD_ODR = DATA_PIN;
+  REG_PIOD_ODR = CLOCK_PIN;
   //enable pins
-  PIOD->PIO_PER = DATA_PIN;
-  PIOD->PIO_PER = CLOCK_PIN;
+  REG_PIOD_PER = DATA_PIN;
+  REG_PIOD_PER = CLOCK_PIN;
 
   //Set LED_PIN as output
   //disable interrupts
-  PIOB->PIO_IDR = LED_PIN;
+  REG_PIOB_IDR = LED_PIN;
   //disable internal pull-up
-  PIOB->PIO_PUDR = LED_PIN;
+  REG_PIOB_PUDR = LED_PIN;
   //disable multi-drive
-  PIOB->PIO_MDDR = LED_PIN;
+  REG_PIOB_MDDR = LED_PIN;
   //set pin as output
-  PIOB->PIO_OER = LED_PIN;
+  REG_PIOB_OER = LED_PIN;
   //enable pin
-  PIOB->PIO_PER = LED_PIN;
+  REG_PIOB_PER = LED_PIN;
 
   //enable and set interrupt priority on port D
-  pmc_enable_periph_clk(ID_PIOD);
-  NVIC_DisableIRQ(PIOD_IRQn);
-  NVIC_ClearPendingIRQ(PIOD_IRQn);
-  NVIC_SetPriority(PIOD_IRQn, 0);
-  NVIC_EnableIRQ(PIOD_IRQn);
-  pmc_enable_periph_clk(PIOD_IRQn);
+  REG_PMC_PCDR0 = PIOD_IRQ; //ID_PIOD
+  *REG_ICER = PIOD_IRQ; //DisableIRQ
+  *REG_ICPR = PIOD_IRQ; /* Clear pending interrupt */
+  *REG_ISER = PIOD_IRQ; //DisableIRQ
+  REG_PMC_PCER0 = PIOD_IRQ; //PIOD_IRQn
 
   //set interrupt mode CHANGE
   PIOD->PIO_AIMDR = CLOCK_PIN;
